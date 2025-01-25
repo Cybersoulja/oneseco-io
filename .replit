@@ -28,7 +28,6 @@ pattern = "**/{*.js,*.jsx,*.ts,*.tsx}"
 start = "typescript-language-server --stdio"
 
 [workflows]
-runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -53,3 +52,6 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[objectStorage]
+defaultBucketID = "replit-objstore-acb163c6-f03c-4e3d-afa5-b983c7f73d2a"
