@@ -5,6 +5,20 @@ import { generateStorySegment, generateStoryStart } from "./lib/openai";
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express) {
+  // Incoming: n8n calls this to send data or trigger something in the app.
+  // Set N8N_WEBHOOK_SECRET so only requests carrying that secret are accepted.
+  app.post("/api/webhooks/n8n", (req, res) => {
+    const expectedSecret = process.env.N8N_WEBHOOK_SECRET;
+    if (expectedSecret && req.header("x-n8n-secret") !== expectedSecret) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    console.log("Received webhook from n8n:", req.body);
+    // TODO: once you know what n8n should trigger, handle req.body here
+    // (e.g. update a story, create a character, etc.)
+    res.json({ received: true });
+  });
+
   app.post("/api/characters", async (req, res) => {
     try {
       const character = await db.insert(characters).values(req.body).returning();
