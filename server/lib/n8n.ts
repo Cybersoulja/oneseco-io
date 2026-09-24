@@ -16,6 +16,7 @@ export async function sendToN8n(event: string, data: Record<string, unknown>) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ event, data, timestamp: new Date().toISOString() }),
+      signal: AbortSignal.timeout(10000),
     });
 
     if (!response.ok) {
