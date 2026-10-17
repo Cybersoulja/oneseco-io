@@ -1,6 +1,7 @@
 import { pgTable, text, integer, jsonb, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 export const characters = pgTable("characters", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -28,6 +29,25 @@ export const storyChoices = pgTable("story_choices", {
   consequence: text("consequence").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const charactersRelations = relations(characters, ({ many }) => ({
+  stories: many(stories),
+}));
+
+export const storiesRelations = relations(stories, ({ one, many }) => ({
+  character: one(characters, {
+    fields: [stories.characterId],
+    references: [characters.id],
+  }),
+  choices: many(storyChoices),
+}));
+
+export const storyChoicesRelations = relations(storyChoices, ({ one }) => ({
+  story: one(stories, {
+    fields: [storyChoices.storyId],
+    references: [stories.id],
+  }),
+}));
 
 export const insertCharacterSchema = createInsertSchema(characters);
 export const selectCharacterSchema = createSelectSchema(characters);
