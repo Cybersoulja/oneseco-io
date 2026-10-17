@@ -23,7 +23,7 @@ export function registerRoutes(app: Express) {
     try {
       const character = await db.insert(characters).values(req.body).returning();
       res.json(character[0]);
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
@@ -33,6 +33,9 @@ export function registerRoutes(app: Express) {
       const character = await db.query.characters.findFirst({
         where: eq(characters.id, req.body.characterId)
       });
+      if (!character) {
+        return res.status(404).json({ error: "Character not found" });
+      }
       
       const initialStory = await generateStoryStart(character);
       const story = await db.insert(stories).values({
@@ -43,8 +46,26 @@ export function registerRoutes(app: Express) {
         history: []
       }).returning();
       
-      res.json(story[0]);
-    } catch (error) {
+      if (initialStory.choices && initialStory.choices.length > 0) {
+        await db.insert(storyChoices).values(
+          initialStory.choices.map(c => ({
+            storyId: story[0].id,
+            choiceText: c.text,
+            consequence: c.consequence
+          }))
+        );
+      }
+
+      const storyWithChoices = await db.query.stories.findFirst({
+        where: eq(stories.id, story[0].id),
+        with: {
+          character: true,
+          choices: true
+        }
+      });
+
+      res.json(storyWithChoices);
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
@@ -54,9 +75,12 @@ export function registerRoutes(app: Express) {
       const story = await db.query.stories.findFirst({
         where: eq(stories.id, req.params.id)
       });
+      if (!story) {
+        return res.status(404).json({ error: "Story not found" });
+      }
       
       const nextSegment = await generateStorySegment(
-        story.context,
+        story.context as Record<string, unknown>,
         req.body.choice
       );
       
@@ -64,13 +88,33 @@ export function registerRoutes(app: Express) {
         .set({
           currentScene: nextSegment.scene,
           context: nextSegment.context,
-          history: [...story.history, { scene: story.currentScene, choice: req.body.choice }]
+          history: [...(story.history as any[]), { scene: story.currentScene, choice: req.body.choice }]
         })
         .where(eq(stories.id, req.params.id))
         .returning();
+
+      await db.delete(storyChoices).where(eq(storyChoices.storyId, story.id));
+
+      if (nextSegment.choices && nextSegment.choices.length > 0) {
+        await db.insert(storyChoices).values(
+          nextSegment.choices.map(c => ({
+            storyId: story.id,
+            choiceText: c.text,
+            consequence: c.consequence
+          }))
+        );
+      }
+
+      const updatedStoryWithChoices = await db.query.stories.findFirst({
+        where: eq(stories.id, updated[0].id),
+        with: {
+          character: true,
+          choices: true
+        }
+      });
       
-      res.json(updated[0]);
-    } catch (error) {
+      res.json(updatedStoryWithChoices);
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
@@ -80,11 +124,12 @@ export function registerRoutes(app: Express) {
       const story = await db.query.stories.findFirst({
         where: eq(stories.id, req.params.id),
         with: {
-          character: true
+          character: true,
+          choices: true
         }
       });
       res.json(story);
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });

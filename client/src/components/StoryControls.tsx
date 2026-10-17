@@ -3,11 +3,17 @@ import { Card } from "@/components/ui/card";
 import { Save, BookOpen, Home } from "lucide-react";
 import { useLocation } from "wouter";
 
+interface StoryChoice {
+  id: string;
+  choiceText: string;
+}
+
 interface StoryControlsProps {
   story: {
     id: string;
     currentScene: string;
     context: Record<string, unknown>;
+    choices?: StoryChoice[];
   };
   onChoice: (choice: string) => void;
 }
@@ -15,11 +21,13 @@ interface StoryControlsProps {
 export default function StoryControls({ story, onChoice }: StoryControlsProps) {
   const [, setLocation] = useLocation();
 
-  const choices = [
-    "Continue bravely forward",
-    "Take a cautious approach",
-    "Seek an alternative path"
-  ];
+  const choices = story.choices?.length
+    ? story.choices.map(c => c.choiceText)
+    : [
+        "Continue bravely forward",
+        "Take a cautious approach",
+        "Seek an alternative path"
+      ];
 
   return (
     <div className="space-y-4">
